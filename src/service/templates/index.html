@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Copyless Intelligent Plargiarism Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.6);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --accent-color: #38bdf8;
+        --accent-hover: #0ea5e9;
+        --border-color: rgba(148, 163, 184, 0.1);
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: var(--bg-color);
+        background-image: radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                          radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+        background-attachment: fixed;
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 2rem 1rem;
+      }
+
+      main {
+        width: 100%;
+        max-width: 1000px;
+      }
+
+      .glass-panel {
+        background: var(--card-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 3rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #38bdf8, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0 0 1rem 0;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+
+      .input-section {
+        margin-bottom: 2rem;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 250px;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+        line-height: 1.6;
+        resize: vertical;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+        color: #0f172a;
+        border: none;
+        padding: 1rem 2.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(56, 189, 248, 0.4);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .params-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        background: rgba(15, 23, 42, 0.4);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .tab-btn.active {
+        color: var(--accent-color);
+        border-bottom-color: var(--accent-color);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      /* File Upload */
+      .file-upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 3rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: rgba(15, 23, 42, 0.4);
+      }
+
+      .file-upload-area:hover, .file-upload-area.dragover {
+        border-color: var(--accent-color);
+        background: rgba(56, 189, 248, 0.05);
+      }
+
+      .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .file-name {
+        margin-top: 1rem;
+        color: var(--accent-color);
+        font-weight: 500;
+      }
+
+      /* Results Section */
+      .results-container {
+        margin-top: 3rem;
+        border-top: 1px solid var(--border-color);
+        padding-top: 3rem;
+        display: none;
+        animation: fadeIn 0.5s ease;
+      }
+
+      .results-container.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: rgba(56, 189, 248, 0.1);
+        border-radius: 12px;
+        color: var(--accent-color);
+        font-weight: 500;
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Metrics Grid */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+      }
+
+      .metric-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+      }
+
+      .metric-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+      }
+
+      .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .metric-value.score {
+        background: linear-gradient(to right, #f472b6, #fb7185);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Section Headers */
+      h2 {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      h2::before {
+        content: '';
+        display: block;
+        width: 4px;
+        height: 24px;
+        background: var(--accent-color);
+        border-radius: 2px;
+      }
+
+      /* Sources List */
+      .sources-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 3rem;
+      }
+
+      .source-item {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: border-color 0.2s;
+      }
+
+      .source-item:hover {
+        border-color: var(--accent-color);
+      }
+
+      .source-info strong {
+        display: block;
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+        color: var(--accent-color);
+      }
+
+      .source-info span {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+      }
+
+      .source-score {
+        background: rgba(56, 189, 248, 0.1);
+        color: var(--accent-color);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+      }
+
+      /* Sentence Analysis */
+      .sentence-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .sentence-item {
+        background: rgba(15, 23, 42, 0.3);
+        border-left: 4px solid transparent;
+        padding: 1.25rem;
+        border-radius: 0 12px 12px 0;
+        line-height: 1.7;
+      }
+
+      .sentence-item.identical { border-left-color: var(--danger-color); background: rgba(239, 68, 68, 0.05); }
+      .sentence-item.minor { border-left-color: var(--warning-color); background: rgba(245, 158, 11, 0.05); }
+      .sentence-item.paraphrased { border-left-color: var(--accent-color); background: rgba(56, 189, 248, 0.05); }
+      .sentence-item.original { border-left-color: var(--success-color); background: rgba(16, 185, 129, 0.05); }
+
+      .sentence-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+      }
+
+      .meta-tag { padding: 0.2rem 0.5rem; border-radius: 4px; }
+      .meta-tag.identical { color: var(--danger-color); background: rgba(239, 68, 68, 0.1); }
+      .meta-tag.minor { color: var(--warning-color); background: rgba(245, 158, 11, 0.1); }
+      .meta-tag.paraphrased { color: var(--accent-color); background: rgba(56, 189, 248, 0.1); }
+      .meta-tag.original { color: var(--success-color); background: rgba(16, 185, 129, 0.1); }
+
+      .match-source {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      /* JSON Viewer */
+      details.json-viewer {
+        margin-top: 3rem;
+        background: #0f172a;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+      }
+
+      details.json-viewer summary {
+        padding: 1rem;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      details.json-viewer pre {
+        margin: 0;
+        padding: 1.5rem;
+        overflow-x: auto;
+        color: #a5b4fc;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="glass-panel">
+        <header>
+          <h1>Copyless</h1>
+          <p class="subtitle">
+            新一代 AI 驱动的学术论文查重系统。基于深度语义分析，精准识别改写、翻译与微调抄袭。
+          </p>
+        </header>
+
+        <form id="check-form">
+          <div class="input-section">
+            <div class="tabs">
+              <button type="button" class="tab-btn active" data-tab="text">文本输入</button>
+              <button type="button" class="tab-btn" data-tab="file">上传文档</button>
+            </div>
+            
+            <div id="tab-text" class="tab-content active">
+              <textarea
+                id="paper-content"
+                name="content"
+                placeholder="在此处粘贴论文正文内容..."
+              ></textarea>
+            </div>
+
+            <div id="tab-file" class="tab-content">
+              <div class="file-upload-area" id="drop-zone">
+                <input type="file" id="file-input" accept=".pdf" style="display: none;" />
+                <div class="upload-icon">📄</div>
+                <p>点击或拖拽 PDF 文件到此处</p>
+                <p class="file-name" id="file-name"></p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="controls">
+            <div class="params-info">
+              配置: Top-K={{ defaults.top_k }} | Threshold={{ defaults.score_threshold }}
+            </div>
+            <button type="submit" id="submit-btn" class="btn-primary">开始深度查重</button>
+          </div>
+        </form>
+
+        <div id="results" class="results-container">
+          <div class="status-bar" id="task-status">
+            <div class="spinner"></div>
+            <span id="status-text">正在分析文档语义结构...</span>
+          </div>
+
+          <div id="report-wrapper" style="display: none;">
+            <!-- Metrics -->
+            <div class="metrics-grid" id="summary">
+              <!-- Injected by JS -->
+            </div>
+
+            <!-- Top Sources -->
+            <div id="sources-section" style="display: none;">
+              <h2>主要相似来源</h2>
+              <div class="sources-list" id="top-sources"></div>
+            </div>
+
+            <!-- Sentence Analysis -->
+            <div id="sentences-section" style="display: none;">
+              <h2>逐句深度分析</h2>
+              <div class="sentence-list" id="sentence-details"></div>
+            </div>
+
+            <!-- Raw JSON -->
+            <details class="json-viewer">
+              <summary>查看原始分析数据 (JSON)</summary>
+              <pre id="report-json"></pre>
+            </details>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById("check-form");
+      const textarea = document.getElementById("paper-content");
+      const fileInput = document.getElementById("file-input");
+      const dropZone = document.getElementById("drop-zone");
+      const fileNameDisplay = document.getElementById("file-name");
+      const submitBtn = document.getElementById("submit-btn");
+      const results = document.getElementById("results");
+      const statusText = document.getElementById("status-text");
+      const reportWrapper = document.getElementById("report-wrapper");
+      const reportJson = document.getElementById("report-json");
+      const summaryGrid = document.getElementById("summary");
+      const sourcesSection = document.getElementById("sources-section");
+      const sourcesList = document.getElementById("top-sources");
+      const sentencesSection = document.getElementById("sentences-section");
+      const sentenceDetails = document.getElementById("sentence-details");
+      const taskStatus = document.getElementById("task-status");
+
+      // Tab Switching
+      const tabs = document.querySelectorAll('.tab-btn');
+      const contents = document.querySelectorAll('.tab-content');
+      let activeTab = 'text';
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          contents.forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+          activeTab = tab.dataset.tab;
+        });
+      });
+
+      // File Upload Handling
+      dropZone.addEventListener('click', () => fileInput.click());
+      
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          updateFileName();
+        }
+      });
+
+      fileInput.addEventListener('change', updateFileName);
+
+      function updateFileName() {
+        if (fileInput.files.length) {
+          fileNameDisplay.textContent = fileInput.files[0].name;
+        } else {
+          fileNameDisplay.textContent = '';
+        }
+      }
+
+      const DATA_STATUS_DONE = new Set(["completed", "failed"]);
+
+      async function pollStatus(taskId, signal, onStatus) {
+        const endpoint = `/v1/reports/${taskId}`;
+        while (true) {
+          if (signal.aborted) throw new Error("操作已中止");
+          
+          const res = await fetch(endpoint, { headers: { Accept: "application/json" } });
+          if (!res.ok) throw new Error(`查询失败: ${res.status}`);
+          
+          const data = await res.json();
+          if (typeof onStatus === "function") {
+            onStatus(data.status, data);
+          } else {
+            updateStatus(data.status);
+          }
+          
+          if (DATA_STATUS_DONE.has(data.status)) return data;
+          
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      }
+
+      function updateStatus(status) {
+        const map = {
+          pending: "任务已提交，正在排队...",
+          processing: "AI 引擎正在进行语义比对...",
+          completed: "分析完成",
+          failed: "任务执行失败"
+        };
+        statusText.textContent = map[status] || status;
+        
+        const spinner = taskStatus.querySelector('.spinner');
+        if (status === 'completed' || status === 'failed') {
+          if(spinner) spinner.style.display = 'none';
+        } else {
+          if(spinner) spinner.style.display = 'block';
+        }
+      }
+
+      function renderSummary(report) {
+        summaryGrid.innerHTML = "";
+        
+        const createMetric = (label, value, isScore = false) => {
+          const div = document.createElement('div');
+          div.className = 'metric-card';
+          div.innerHTML = `
+            <div class="metric-label">${label}</div>
+            <div class="metric-value ${isScore ? 'score' : ''}">${value}</div>
+          `;
+          return div;
+        };
+
+        const score = Math.round((report.overall_similarity_score || 0) * 100);
+        summaryGrid.appendChild(createMetric('综合重复率', `${score}%`, true));
+        summaryGrid.appendChild(createMetric('总句数', report.summary?.total_sentences ?? "-"));
+        summaryGrid.appendChild(createMetric('高度相似句', report.summary?.identical_count ?? "-"));
+        summaryGrid.appendChild(createMetric('原创句段', report.summary?.original_count ?? "-"));
+      }
+
+      function renderSources(report) {
+        const sources = report.top_sources || [];
+        if (!sources.length) {
+          sourcesSection.style.display = "none";
+          return;
+        }
+        sourcesSection.style.display = "block";
+        sourcesList.innerHTML = "";
+        
+        sources.forEach((src) => {
+          const div = document.createElement("div");
+          div.className = "source-item";
+          const scorePercent = Math.round((src.weight || 0) * 100);
+          div.innerHTML = `
+            <div class="source-info">
+              <strong>${src.paper_id || "未知来源"}</strong>
+              <span>匹配句段数: ${src.sentence_count ?? 0}</span>
+            </div>
+            <div class="source-score">
+              贡献度 ${scorePercent}%
+            </div>
+          `;
+          sourcesList.appendChild(div);
+        });
+      }
+
+      function renderSentences(report) {
+        const sentences = report.sentence_details || [];
+        if (!sentences.length) {
+          sentencesSection.style.display = "none";
+          return;
+        }
+
+        sentencesSection.style.display = "block";
+        sentenceDetails.innerHTML = "";
+
+        sentences.forEach((item, idx) => {
+          const div = document.createElement("div");
+          const status = (item.status || "original").toLowerCase();
+          const statusMap = {
+            identical: "完全一致",
+            minor_changes: "微小改动",
+            paraphrased: "改写/释义",
+            cited: "引用",
+            original: "原创"
+          };
+          const statusClass = {
+            identical: "identical",
+            minor_changes: "minor",
+            paraphrased: "paraphrased",
+            cited: "original",
+            original: "original"
+          }[status] || "original";
+
+          div.className = `sentence-item ${statusClass}`;
+          
+          let matchHtml = '';
+          if (item.matched_source?.sentence) {
+            matchHtml = `
+              <div class="match-source">
+                <strong>匹配来源 (${item.matched_source.paper_id || "?"}):</strong> 
+                ${item.matched_source.sentence}
+              </div>
+            `;
+          }
+
+          div.innerHTML = `
+            <div class="sentence-meta">
+              <span class="meta-tag ${statusClass}">${statusMap[status] || status}</span>
+              <span style="color: var(--text-secondary)">#${idx + 1}</span>
+            </div>
+            <div class="sentence-text">${item.text || ""}</div>
+            ${matchHtml}
+          `;
+          sentenceDetails.appendChild(div);
+        });
+      }
+
+      function renderReport(payload) {
+        reportWrapper.style.display = "block";
+        if (!payload.report) {
+          reportJson.textContent = JSON.stringify(payload, null, 2);
+          return;
+        }
+
+        renderSummary(payload.report);
+        renderSources(payload.report);
+        renderSentences(payload.report);
+        reportJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        
+        let taskId;
+        const controller = new AbortController();
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "正在提交...";
+        reportWrapper.style.display = "none";
+        results.classList.add("active");
+        updateStatus("pending");
+
+        try {
+          if (activeTab === 'text') {
+            if (!textarea.value.trim()) throw new Error("请先输入文本");
+            
+            const res = await fetch("/v1/papers/check", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content: textarea.value })
+            });
+            
+            if (!res.ok) {
+              const error = await res.json().catch(() => ({}));
+              throw new Error(error.detail || `提交失败: ${res.status}`);
+            }
+            taskId = (await res.json()).task_id;
+            
+          } else {
+            if (!fileInput.files.length) throw new Error("请先选择 PDF 文件");
+            
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            
+            const res = await fetch("/v1/papers/upload_pdf", {
+              method: "POST",
+              body: formData
+            });
+            
+            if (!res.ok) {
+              const error = await res.json().catch(() => ({}));
+              throw new Error(error.detail || `上传失败: ${res.status}`);
+            }
+            taskId = (await res.json()).task_id;
+          }
+
+          const finalPayload = await pollStatus(taskId, controller.signal, (status) => updateStatus(status));
+          renderReport(finalPayload);
+        } catch (err) {
+          updateStatus("failed");
+          statusText.textContent = err.message || String(err);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "开始深度查重";
+        }
+      });
+    </script>
+  </body>
+</html>

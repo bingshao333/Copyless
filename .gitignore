@@ -1,0 +1,30 @@
+# python
+.venv/
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# model / outputs / large data
+models/
+outputs/
+mnt/
+tmp/
+data/
+storage/
+snapshots/
+list.txt
+.qdrant-initialized
+nohup.out
+*.sqlite3
+*.db
+
+# notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
