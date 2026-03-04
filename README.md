@@ -1,6 +1,6 @@
-# Copyless — Semantic Plagiarism Detection for Academic Papers
+# Copyless — 面向学术论文的语义查重检测系统
 
-> A deep plagiarism detection system that combines large-scale sentence vector indexing with multi-stage semantic/lexical fusion to identify copying, paraphrasing, and citation behaviors in academic papers.
+> 一个深度查重系统，结合大规模句向量索引与多阶段语义/词法融合判定，精准识别学术论文中的抄袭、改写与引用行为。
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
@@ -9,124 +9,124 @@
 
 ---
 
-## ✨ Key Features
+## ✨ 核心特性
 
-- **Sentence-Level Deep Detection** — Goes beyond keyword matching by performing semantic similarity analysis on every sentence, catching paraphrasing and subtle rewording.
-- **Hybrid Retrieval (Dense + Sparse)** — Combines Qwen3-0.6B dense embeddings with hashed bag-of-words sparse vectors, fused via Reciprocal Rank Fusion (RRF) for high recall.
-- **Multi-Stage Judgment Pipeline** — Two-stage retrieval → reranking → decision tree classification using both cosine similarity and normalized Levenshtein distance.
-- **Smart Citation Awareness** — Automatically parses reference sections and performs context-window citation scanning to distinguish legitimate citations from plagiarism.
-- **Async Online Service** — Production-ready FastAPI service with async task queue, background workers (thread pool executor for CPU-bound tasks), and webhook callbacks.
-- **Comprehensive Benchmarking** — Built-in sentence-level and document-level evaluation framework with Precision/Recall/F1 metrics, latency profiling, and throughput measurement.
+- **句级深度检测** — 不是简单的关键词匹配，而是对每一句进行语义相似度分析，能捕捉改写和细微措辞变化。
+- **稠密+稀疏混合检索** — 结合 Qwen3-0.6B 稠密向量与哈希词袋稀疏向量，通过倒数排名融合（RRF）策略实现高召回率。
+- **多阶段判定管线** — 两阶段检索 → 重排序 → 决策树分类，同时利用余弦相似度和归一化编辑距离进行综合判定。
+- **智能引用识别** — 自动解析参考文献章节，通过上下文窗口扫描区分合法引用与抄袭行为。
+- **异步在线服务** — 生产级 FastAPI 服务，支持异步任务队列、后台 Worker（线程池执行器处理 CPU 密集任务）以及 Webhook 回调通知。
+- **完整评测框架** — 内置句级和文档级评测，支持 Precision/Recall/F1 指标、延迟画像（P95/P99）和吞吐量统计。
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ 系统架构
 
 ```
-┌────────────────────────── Offline Pipeline ──────────────────────────┐
-│                                                                       │
-│  PDF/LaTeX  ──→  Text Extraction  ──→  Clean & Segment  ──→  Encode  │
-│  (PyMuPDF)      (extract.py)         (preprocess.py)     (Qwen3-0.6B)│
-│                                                                │      │
-│                                               Dense + Sparse Vectors  │
-│                                                                │      │
-│                                                     ┌──────────▼──┐   │
-│                                                     │   Qdrant    │   │
-│                                                     │   Vector DB │   │
-│                                                     └──────┬──────┘   │
-└────────────────────────────────────────────────────────────────────────┘
-															 │
-┌────────────────────────── Online Service ─────────────────────────────┐
-│                                                                       │
-│  User Paper  ──→  FastAPI  ──→  Task Queue  ──→  Async Workers       │
-│  (POST /v1/      (api.py)      (tasks.py)       (worker.py)          │
-│   papers/check)                                       │               │
-│                                    ┌──────────────────┘               │
-│                                    ▼                                  │
-│                           ┌────────────────┐                          │
-│                           │ For each sent:  │                          │
-│                           │ 1. Encode       │                          │
-│                           │ 2. Vector Search│                          │
-│                           │ 3. Rerank Top-K │                          │
-│                           │ 4. Levenshtein  │                          │
-│                           │ 5. Decision Tree│                          │
-│                           │ 6. Citation Scan│                          │
-│                           └───────┬────────┘                          │
-│                                   ▼                                   │
-│                           Report Generation                           │
-│                        (overall score + top                            │
-│                         sources + details)                             │
-│                                   │                                   │
-│                          GET /v1/reports/{id}                          │
-└───────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────── 离线索引管线 ───────────────────────────┐
+│                                                                     │
+│  PDF/LaTeX  ──→  文本提取      ──→  清洗分句      ──→  向量编码    │
+│  (PyMuPDF)      (extract.py)      (preprocess.py)    (Qwen3-0.6B)  │
+│                                                           │         │
+│                                            稠密向量 + 稀疏向量      │
+│                                                           │         │
+│                                                  ┌────────▼──────┐  │
+│                                                  │    Qdrant     │  │
+│                                                  │  向量数据库    │  │
+│                                                  └───────┬───────┘  │
+└──────────────────────────────────────────────────────────────────────┘
+														   │
+┌─────────────────────────── 在线查重服务 ───────────────────────────┐
+│                                                                     │
+│  用户论文  ──→  FastAPI  ──→  任务队列   ──→  异步 Worker          │
+│  (POST /v1/    (api.py)     (tasks.py)      (worker.py)            │
+│   papers/check)                                  │                  │
+│                                   ┌──────────────┘                  │
+│                                   ▼                                 │
+│                          ┌─────────────────┐                        │
+│                          │ 逐句处理:        │                        │
+│                          │ 1. 向量编码      │                        │
+│                          │ 2. 向量检索      │                        │
+│                          │ 3. Top-K 重排序  │                        │
+│                          │ 4. 编辑距离计算  │                        │
+│                          │ 5. 决策树分类    │                        │
+│                          │ 6. 引用识别      │                        │
+│                          └────────┬────────┘                        │
+│                                   ▼                                 │
+│                           报告生成                                   │
+│                     (总体分数 + 来源排名                              │
+│                      + 逐句详情)                                     │
+│                                   │                                 │
+│                         GET /v1/reports/{id}                        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔧 Tech Stack
+## 🔧 技术栈
 
-| Layer | Technology |
-|-------|-----------|
-| **Embedding Model** | Qwen3-0.6B (mean pooling + L2 norm, FP16 on GPU) |
-| **Vector Database** | Qdrant (HNSW index, cosine similarity, hybrid dense+sparse) |
-| **Web Framework** | FastAPI + Uvicorn (async lifespan, background workers) |
-| **Text Extraction** | PyMuPDF (PDF), pylatexenc (LaTeX), regex fallback |
-| **NLP Tokenization** | NLTK Punkt, spaCy, custom mixed CJK/EN splitter |
-| **Similarity Metrics** | Cosine similarity (semantic) + Normalized Levenshtein (lexical) |
-| **Fusion Strategy** | Reciprocal Rank Fusion (RRF) for hybrid retrieval |
-| **Task Queue** | In-memory async queue with TTL-based cleanup |
-| **Benchmarking** | Custom framework: Precision/Recall/F1, P95/P99 latency |
+| 层级 | 技术方案 |
+|------|----------|
+| **向量模型** | Qwen3-0.6B（Mean Pooling + L2 归一化，GPU FP16 推理） |
+| **向量数据库** | Qdrant（HNSW 索引，余弦相似度，稠密+稀疏混合检索） |
+| **Web 框架** | FastAPI + Uvicorn（async lifespan，后台 Worker） |
+| **文本提取** | PyMuPDF（PDF）、pylatexenc（LaTeX）、正则回退 |
+| **分句工具** | NLTK Punkt、spaCy、自定义中英文混合分句器 |
+| **相似度指标** | 余弦相似度（语义） + 归一化 Levenshtein 距离（词法） |
+| **融合策略** | 倒数排名融合（Reciprocal Rank Fusion, RRF） |
+| **任务队列** | 内存异步队列，支持 TTL 自动清理 |
+| **评测体系** | 自研框架：Precision/Recall/F1，P95/P99 延迟 |
 
 ---
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 Copyless/
 ├── src/
-│   ├── pipeline.py          # Offline batch processing CLI (extract → encode → index)
-│   ├── extract.py           # PDF/LaTeX text extraction with error handling
-│   ├── preprocess.py        # Text cleaning, sentence segmentation (NLTK/spaCy/mixed)
-│   ├── embedding.py         # Qwen3-0.6B sentence encoder (GPU, batched, L2 norm)
-│   ├── qdrant_io.py         # Qdrant collection management & batch vector operations
-│   ├── hybrid_search.py     # Dense+Sparse hybrid retrieval with RRF fusion
-│   ├── benchmark.py         # Sentence-level & document-level evaluation framework
-│   ├── metrics.py           # Precision/Recall/F1 & latency statistics
+│   ├── pipeline.py          # 离线批处理 CLI 入口（提取 → 编码 → 索引）
+│   ├── extract.py           # PDF/LaTeX 文本提取（含异常处理）
+│   ├── preprocess.py        # 文本清洗、分句（NLTK/spaCy/混合模式）
+│   ├── embedding.py         # Qwen3-0.6B 句向量编码器（GPU 批量编码、L2 归一化）
+│   ├── qdrant_io.py         # Qdrant 集合管理 & 批量向量操作
+│   ├── hybrid_search.py     # 稠密+稀疏混合检索（RRF 融合）
+│   ├── benchmark.py         # 句级 & 文档级评测框架
+│   ├── metrics.py           # Precision/Recall/F1 & 延迟统计
 │   └── service/
-│       ├── api.py           # FastAPI endpoints (async submit + result polling)
-│       ├── config.py        # Unified config via pydantic-settings (.env support)
-│       ├── models.py        # Pydantic schemas for requests, reports, task states
-│       ├── tasks.py         # In-memory task queue with TTL cleanup
-│       ├── retrieval.py     # Retrieval pipeline (preprocess → encode → search)
-│       ├── worker.py        # Async background workers (thread pool for CPU tasks)
-│       ├── citations.py     # Reference parsing & context-window citation detection
-│       ├── report.py        # Report aggregation (overall score, top sources)
-│       ├── utils.py         # Levenshtein distance, decision tree, weighted scoring
-│       └── templates/       # Web UI template for interactive demo
-├── scripts/                 # Data sync & environment setup utilities
-├── requirements.txt         # Pinned dependencies with version bounds
-├── Doc.md                   # Technical specification document
+│       ├── api.py           # FastAPI 路由（异步提交 + 结果轮询）
+│       ├── config.py        # 统一配置（pydantic-settings，.env 支持）
+│       ├── models.py        # Pydantic 数据模型（请求、报告、任务状态）
+│       ├── tasks.py         # 内存任务队列（TTL 自动清理）
+│       ├── retrieval.py     # 检索管线（预处理 → 编码 → 检索）
+│       ├── worker.py        # 异步后台 Worker（线程池执行 CPU 密集任务）
+│       ├── citations.py     # 参考文献解析 & 上下文窗口引用检测
+│       ├── report.py        # 报告聚合（总体评分、来源排名）
+│       ├── utils.py         # 编辑距离、决策树、加权评分
+│       └── templates/       # Web 前端模板（交互式演示页面）
+├── scripts/                 # 数据同步 & 环境搭建辅助脚本
+├── requirements.txt         # 依赖清单（含版本上下限约束）
+├── Doc.md                   # 技术设计文档
 └── README.md
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 1. Environment Setup
+### 1. 环境搭建
 
 ```bash
-# Python 3.10+ recommended
+# 推荐 Python 3.10+
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# (Optional) spaCy model for sentence splitting
+# （可选）spaCy 分句模型
 python -m spacy download en_core_web_sm
 ```
 
-### 2. Offline Indexing Pipeline
+### 2. 离线索引管线
 
-Build the sentence vector index from academic papers:
+从学术论文构建句向量索引库：
 
 ```bash
 python -m src.pipeline \
@@ -140,7 +140,7 @@ python -m src.pipeline \
 	--qdrant-url http://localhost:6333
 ```
 
-**Dry-run mode** (no Qdrant required):
+**空运行模式**（无需 Qdrant）：
 
 ```bash
 python -m src.pipeline \
@@ -151,36 +151,36 @@ python -m src.pipeline \
 	--dump outputs/sample.jsonl
 ```
 
-### 3. Start Online Detection Service
+### 3. 启动在线查重服务
 
 ```bash
 uvicorn src.service.api:app --host 0.0.0.0 --port 8080
 ```
 
-**Submit a paper:**
+**提交论文：**
 ```bash
 curl -X POST http://localhost:8080/v1/papers/check \
 	-H 'Content-Type: application/json' \
-	-d '{"content": "Your paper text...", "callback_url": "https://example.com/hook"}'
+	-d '{"content": "论文文本内容...", "callback_url": "https://example.com/hook"}'
 ```
 
-**Poll results:**
+**查询结果：**
 ```bash
 curl http://localhost:8080/v1/reports/<task_id>
 ```
 
-**Web Demo:** Visit `http://localhost:8080/` for an interactive browser-based UI.
+**Web 演示页面：** 访问 `http://localhost:8080/` 即可使用浏览器交互界面。
 
-### 4. Run Benchmarks
+### 4. 运行评测
 
 ```bash
-# Sentence-level evaluation
+# 句级评测
 python -m src.benchmark sentences \
 	--data data/bench/sentences.jsonl \
 	--model models/Qwen3-0.6B \
 	--device cuda --threshold 0.85
 
-# Document-level evaluation
+# 文档级评测
 python -m src.benchmark documents \
 	--data data/bench/docs.jsonl \
 	--model models/Qwen3-0.6B \
@@ -189,55 +189,55 @@ python -m src.benchmark documents \
 
 ---
 
-## 🧠 Core Algorithms
+## 🧠 核心算法
 
-### Similarity Judgment Decision Tree
+### 相似度判定决策树
 
-The system uses a **rule-based decision tree** that combines semantic (cosine) and lexical (Levenshtein) signals for explainable classification:
+系统采用**规则决策树**，融合语义（余弦）和词法（编辑距离）信号，实现可解释的分类判定：
 
 ```
-IF    Sim_lev ≥ T_lev_high (0.99)      →  Identical
+IF    Sim_lev ≥ T_lev_high (0.99)      →  完全相同（Identical）
 ELIF  Sim_lev ≥ T_lev_med  (0.90)
-	  AND Sim_cos ≥ T_cos_high (0.95)  →  Minor Changes
-ELIF  Sim_cos ≥ T_cos_mid  (0.88)      →  Paraphrased
-ELSE                                    →  Original
+	  AND Sim_cos ≥ T_cos_high (0.95)  →  微调修改（Minor Changes）
+ELIF  Sim_cos ≥ T_cos_mid  (0.88)      →  改写（Paraphrased）
+ELSE                                    →  原创（Original）
 
-// Post-processing: if classified as Minor Changes or Paraphrased
-// AND context window contains citation to the matched source
-//    →  Override to Cited
+// 后处理：若分类为微调修改或改写，
+// 且上下文窗口中存在对匹配来源的引用
+//    →  覆盖为已引用（Cited）
 ```
 
-### Weighted Similarity Score
+### 加权融合评分
 
 ```
 Score_final = 0.7 × Sim_cosine + 0.3 × Sim_levenshtein
 ```
 
-### Overall Document Similarity
+### 文档总体相似度
 
 ```
 Score = (N_identical × 1.0 + N_minor × 0.8 + N_paraphrased × 0.6) / N_total
 ```
 
-### Citation Detection Pipeline
+### 引用检测管线
 
-1. **Reference Section Parsing** — Extract bibliography, map labels `[1]`, `[Author 2025]` to paper IDs
-2. **Inline Citation Localization** — Regex-based detection of citation markers in body text
-3. **Context Window Scanning** — Check ±K sentences around flagged content for relevant citations
-4. **Status Override** — Reclassify `minor_changes`/`paraphrased` → `cited` when citation is confirmed
+1. **参考文献解析** — 提取文末 Bibliography，将标签 `[1]`、`[Author 2025]` 映射到论文 ID
+2. **行内引用定位** — 基于正则表达式检测正文中的引用标记
+3. **上下文窗口扫描** — 检查被标记句子 ±K 范围内是否存在相关引用
+4. **状态覆盖** — 确认引用存在后，将 `微调修改`/`改写` 重分类为 `已引用`
 
 ---
 
-## 📊 API Reference
+## 📊 API 接口
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/papers/check` | POST | Submit paper for plagiarism detection (async) |
-| `/v1/reports/{task_id}` | GET | Poll task status and retrieve report |
-| `/v1/benchmarks/run` | POST | Submit benchmark evaluation task |
-| `/` | GET | Interactive Web Demo UI |
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/v1/papers/check` | POST | 提交论文进行查重（异步） |
+| `/v1/reports/{task_id}` | GET | 轮询任务状态和获取报告 |
+| `/v1/benchmarks/run` | POST | 提交评测任务 |
+| `/` | GET | Web 交互演示页面 |
 
-### Report Structure
+### 报告结构
 
 ```json
 {
@@ -259,51 +259,51 @@ Score = (N_identical × 1.0 + N_minor × 0.8 + N_paraphrased × 0.6) / N_total
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ 配置项
 
-All settings can be overridden via environment variables (prefix `COPYLESS_`) or `.env` file:
+所有配置均可通过环境变量（前缀 `COPYLESS_`）或 `.env` 文件覆盖：
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `COPYLESS_QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `COPYLESS_EMBEDDING_MODEL` | `models/Qwen3-0.6B` | Sentence embedding model |
-| `COPYLESS_TOP_K` | `5` | Number of candidates per query |
-| `COPYLESS_T_COS_HIGH` | `0.95` | High cosine similarity threshold |
-| `COPYLESS_T_COS_MID` | `0.88` | Mid cosine similarity threshold |
-| `COPYLESS_T_LEV_HIGH` | `0.99` | High Levenshtein similarity threshold |
-| `COPYLESS_T_LEV_MED` | `0.90` | Medium Levenshtein similarity threshold |
-| `COPYLESS_WORKER_COUNT` | `2` | Number of background workers |
-
----
-
-## 📈 Benchmark Metrics
-
-The evaluation framework measures:
-
-- **Accuracy**: Sentence-level & document-level Precision / Recall / F1
-- **Latency**: Average, P95, P99 for encoding and retrieval
-- **Throughput**: Sentences/sec (encoding), Queries/sec (retrieval)
-- **Backends**: In-memory (NumPy) or Qdrant for comparison
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `COPYLESS_QDRANT_URL` | `http://localhost:6333` | Qdrant 服务地址 |
+| `COPYLESS_EMBEDDING_MODEL` | `models/Qwen3-0.6B` | 句向量模型路径 |
+| `COPYLESS_TOP_K` | `5` | 每句检索候选数 |
+| `COPYLESS_T_COS_HIGH` | `0.95` | 余弦相似度高阈值 |
+| `COPYLESS_T_COS_MID` | `0.88` | 余弦相似度中阈值 |
+| `COPYLESS_T_LEV_HIGH` | `0.99` | 编辑距离高阈值 |
+| `COPYLESS_T_LEV_MED` | `0.90` | 编辑距离中阈值 |
+| `COPYLESS_WORKER_COUNT` | `2` | 后台 Worker 数量 |
 
 ---
 
-## 🗺️ Roadmap
+## 📈 评测指标
 
-- [ ] Cross-lingual detection via multilingual embeddings
-- [ ] Formula & table similarity detection
-- [ ] Fine-tuned sentence embedding model on plagiarism corpus
-- [ ] Distributed task queue (Redis/Celery) for production scale
-- [ ] Interactive HTML report with highlighted diff view
-- [ ] Helm Chart & Docker Compose for one-click deployment
+评测框架覆盖以下维度：
+
+- **准确性**：句级 & 文档级 Precision / Recall / F1
+- **延迟**：编码和检索的平均、P95、P99 延迟
+- **吞吐量**：编码 Sentences/sec，检索 Queries/sec
+- **后端对比**：内存模式（NumPy）vs Qdrant 实际检索
 
 ---
 
-## 📖 References
+## 🗺️ 路线图
 
-- [Qdrant Documentation](https://qdrant.tech/documentation/)
-- [PAN Plagiarism Corpus](https://pan.webis.de/data.html)
-- [Qwen3 Model](https://huggingface.co/Qwen)
-- [Copyleaks](https://copyleaks.com/) — Industry reference for report format
+- [ ] 跨语言检测（多语言 Embedding 模型）
+- [ ] 公式 & 表格相似度检测
+- [ ] 在查重语料上微调句向量模型
+- [ ] 分布式任务队列（Redis/Celery）以支持生产级扩展
+- [ ] 交互式 HTML 报告（高亮 Diff 视图）
+- [ ] Helm Chart & Docker Compose 一键部署
+
+---
+
+## 📖 参考资料
+
+- [Qdrant 文档](https://qdrant.tech/documentation/)
+- [PAN 查重语料库](https://pan.webis.de/data.html)
+- [Qwen3 模型](https://huggingface.co/Qwen)
+- [Copyleaks](https://copyleaks.com/) — 行业参考报告格式
 
 ---
 
