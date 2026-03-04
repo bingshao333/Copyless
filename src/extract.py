@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Optional
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 try:
     import fitz  # PyMuPDF
@@ -13,33 +16,53 @@ try:
 except Exception:  # pragma: no cover
     LatexNodes2Text = None
 
-# 定义PDF文本提取函数
+# Define PDF text extraction function
 def extract_text_from_pdf(path: Path) -> str:
     if fitz is None:
-        raise RuntimeError("PyMuPDF (fitz) 未安装，无法解析 PDF")
-    doc = fitz.open(path)
+        raise RuntimeError("PyMuPDF (fitz) is not installed, cannot parse PDF")
+    try:
+        doc = fitz.open(path)
+    except Exception as exc:
+        logger.error("Failed to open PDF %s: %s", path, exc)
+        raise RuntimeError(f"Failed to open PDF {path}: {exc}") from exc
     texts = []
-    for page in doc:
-        texts.append(page.get_text("text"))
-    doc.close()
+    try:
+        for page in doc:
+            try:
+                texts.append(page.get_text("text"))
+            except Exception as exc:
+                logger.warning("Failed to extract text from page %d of %s: %s", page.number, path, exc)
+    finally:
+        doc.close()
     return "\n".join(texts)
 
-# 定义LaTeX文本提取函数
+# Define LaTeX text extraction function
 def extract_text_from_tex(path: Path) -> str:
-    text = path.read_text(errors="ignore")
+    try:
+        text = path.read_text(errors="ignore")
+    except Exception as exc:
+        logger.error("Failed to read TeX file %s: %s", path, exc)
+        raise RuntimeError(f"Failed to read TeX file {path}: {exc}") from exc
     if LatexNodes2Text is not None:
-        return LatexNodes2Text().latex_to_text(text)
-    # 简单回退：去除常见 LaTeX 命令
+        try:
+            return LatexNodes2Text().latex_to_text(text)
+        except Exception as exc:
+            logger.warning("pylatexenc failed for %s, falling back to regex: %s", path, exc)
+    # Fallback: strip common LaTeX commands
     text = re.sub(r"\\(section|subsection|textbf|emph|cite|ref|label)\{[^}]*\}", " ", text)
     text = re.sub(r"\\[a-zA-Z]+\*?", " ", text)
     text = re.sub(r"\{\}|\$|~|%", " ", text)
     return text
 
-# 根据后缀选择解析方法
+# Select extraction method by file suffix
 def extract_text(path: Path) -> Optional[str]:
     suffix = path.suffix.lower()
-    if suffix in {".pdf"}:
-        return extract_text_from_pdf(path)
-    if suffix in {".tex"}:
-        return extract_text_from_tex(path)
+    try:
+        if suffix in {".pdf"}:
+            return extract_text_from_pdf(path)
+        if suffix in {".tex"}:
+            return extract_text_from_tex(path)
+    except Exception as exc:
+        logger.error("Text extraction failed for %s: %s", path, exc)
+        return None
     return None

@@ -476,7 +476,7 @@ def main(
         total_sent += len(res.sentences)
         extract_lat_ms.append(res.elapsed_ms)
 
-        base_id = hashlib.md5(str(res.path).encode()).hexdigest()
+        base_id = hashlib.sha256(str(res.path).encode()).hexdigest()
         payload_base = {
             "path": str(res.path),
             "paper_id": res.paper_id,
@@ -490,7 +490,7 @@ def main(
         primary_payloads: List[dict] = []
         payload_commons: List[dict] = []
         for i, sent in enumerate(res.sentences):
-            sid_hex = hashlib.md5(f"{base_id}:{i}".encode()).hexdigest()
+            sid_hex = hashlib.sha256(f"{base_id}:{i}".encode()).hexdigest()[:32]
             sid = str(uuid.UUID(sid_hex))
             ids.append(sid)
             char_start, char_end = res.spans[i] if i < len(res.spans) else (None, None)

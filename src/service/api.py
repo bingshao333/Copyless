@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -21,7 +22,24 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent
 
-app = FastAPI(title="Copyless Plagiarism Detection API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup/shutdown lifecycle using the recommended lifespan pattern."""
+    settings = get_settings()
+    queue = TaskQueue(settings)
+    app.state.task_queue = queue
+    worker_task = asyncio.create_task(start_workers(queue, settings))
+    app.state.worker_task = worker_task
+    yield
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="Copyless Plagiarism Detection API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,7 +48,6 @@ app.add_middleware(
     allow_methods=["*"]
 )
 
-templates_dir = BASE_DIR / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
 
@@ -40,24 +57,7 @@ def get_task_queue(settings: ServiceSettings = Depends(get_settings)) -> TaskQue
     return app.state.task_queue
 
 
-@app.on_event("startup")
-async def startup_event():
-    settings = get_settings()
-    queue = TaskQueue(settings)
-    app.state.task_queue = queue
-    app.state.worker_task = asyncio.create_task(start_workers(queue, settings))
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    worker_task: Optional[asyncio.Task] = getattr(app.state, "worker_task", None)
-    if worker_task:
-        worker_task.cancel()
-        try:
-            await worker_task
-        except asyncio.CancelledError:
-            pass
-
+@app.post("/v1/papers/check",
 
 @app.post("/v1/papers/check", response_model=CheckAcceptedResponse, status_code=202)
 async def submit_paper(req: CheckRequest, queue: TaskQueue = Depends(get_task_queue)):
@@ -69,9 +69,11 @@ async def submit_paper(req: CheckRequest, queue: TaskQueue = Depends(get_task_qu
     except RuntimeError as exc:
         raise HTTPException(status_code=429, detail=str(exc))
 
-    queue._items[state.task_id].metadata["callback_url"] = req.callback_url or ""
-    queue._items[state.task_id].metadata["content_length"] = str(len(req.content))
-    queue._items[state.task_id].metadata["content"] = req.content
+    queue.update_metadata(state.task_id, {
+        "callback_url": req.callback_url or "",
+        "content_length": str(len(req.content)),
+        "content": req.content,
+    })
 
     return CheckAcceptedResponse(task_id=state.task_id)
 
@@ -99,8 +101,10 @@ async def upload_pdf(file: UploadFile = File(...), queue: TaskQueue = Depends(ge
     except RuntimeError as exc:
         raise HTTPException(status_code=429, detail=str(exc))
 
-    queue._items[state.task_id].metadata["content_length"] = str(len(text))
-    queue._items[state.task_id].metadata["content"] = text
+    queue.update_metadata(state.task_id, {
+        "content_length": str(len(text)),
+        "content": text,
+    })
 
     return CheckAcceptedResponse(task_id=state.task_id)
 

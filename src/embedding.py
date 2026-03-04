@@ -183,4 +183,13 @@ class Embedder:
                 outputs.append(emb.cpu().float().numpy())
 
         arr = np.concatenate(outputs, axis=0)
+
+        # Release GPU memory after encoding
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+
         return arr.astype(np.float32).tolist()

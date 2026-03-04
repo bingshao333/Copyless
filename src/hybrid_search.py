@@ -95,7 +95,7 @@ def ensure_hybrid_collection(
     except Exception:
         pass
 
-    client.recreate_collection(
+    client.create_collection(
         collection_name=collection,
         vectors_config={
             dense_name: qm.VectorParams(

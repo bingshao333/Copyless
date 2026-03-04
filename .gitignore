@@ -28,3 +28,7 @@ nohup.out
 
 # OS
 .DS_Store
+
+# Large XML manifests
+arXiv_src_manifest.xml
+*.xml

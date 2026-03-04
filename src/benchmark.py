@@ -285,7 +285,7 @@ def run_document_benchmark(docs: Sequence[Mapping[str, Any]], cfg: BenchConfig) 
     extract_ms = (t_extract_end - t_extract_start) * 1000
     encode_ms = (t_enc_end - t_enc_start) * 1000
     return {
-    "n_docs": len(docs_list),
+        "n_docs": len(docs_list),
         "n_sents": len(all_sents),
         "n_doc_pairs_pred": len(doc_preds),
         "latency_ms": {

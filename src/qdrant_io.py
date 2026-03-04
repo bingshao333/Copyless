@@ -29,7 +29,12 @@ def ensure_collection(
     if not hasattr(qm.Distance, dist_name):
         raise ValueError(f"Unsupported distance '{distance}'. Use one of: COSINE, DOT, EUCLID")
     dist = getattr(qm.Distance, dist_name)
-    client.recreate_collection(
+    # Use delete + create instead of deprecated recreate_collection
+    try:
+        client.delete_collection(collection)
+    except Exception:
+        pass
+    client.create_collection(
         collection_name=collection,
         vectors_config=qm.VectorParams(size=vector_size, distance=dist, on_disk=on_disk),
         hnsw_config=qm.HnswConfigDiff(
@@ -98,16 +103,19 @@ def batch_search(
     with_payload: bool = True,
     hnsw_ef: int = 128,
 ):
-    """批量检索：对多条向量逐一调用 search。简单串行实现。"""
-    out = []
-    for v in query_vectors:
-        out.append(
-            client.search(
-                collection_name=collection,
-                query_vector=v,
-                limit=top_k,
-                with_payload=with_payload,
-                search_params=qm.SearchParams(hnsw_ef=hnsw_ef),
-            )
+    """Batch search using Qdrant's native search_batch API for better performance."""
+    if not query_vectors:
+        return []
+    requests = [
+        qm.SearchRequest(
+            vector=v,
+            limit=top_k,
+            with_payload=with_payload,
+            params=qm.SearchParams(hnsw_ef=hnsw_ef),
         )
-    return out
+        for v in query_vectors
+    ]
+    return client.search_batch(
+        collection_name=collection,
+        requests=requests,
+    )

@@ -31,16 +31,10 @@ def normalized_levenshtein(a: str, b: str) -> float:
     if not a and not b:
         return 1.0
     try:
-        import rapidfuzz.distance as rf_distance
-
-        dist = rf_distance.Levenshtein.distance(a, b)
+        from rapidfuzz.distance import Levenshtein as rf_lev
+        dist = rf_lev.distance(a, b)
     except Exception:
-        try:
-            import Levenshtein  # type: ignore
-
-            dist = Levenshtein.distance(a, b)
-        except Exception:
-            dist = _levenshtein_distance(a, b)
+        dist = _levenshtein_distance(a, b)
     denom = max(len(a), len(b))
     if denom == 0:
         return 1.0

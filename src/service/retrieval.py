@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 from typing import List, Optional, Sequence
 
 from qdrant_client import QdrantClient
@@ -67,6 +66,8 @@ class RetrievalPipeline:
 
     @staticmethod
     def cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
+        import numpy as np
+
         a = np.asarray(vec_a, dtype=float)
         b = np.asarray(vec_b, dtype=float)
         num = float(np.dot(a, b))

@@ -39,19 +39,21 @@ def clean_text(text: str) -> str:
 
 def sentences_nltk(text: str) -> List[str]:
     import nltk
-
-    try:
-        # 尝试查找 NLTK 的 Punkt 句子分割模型是否已存在。
-        nltk.data.find("tokenizers/punkt")
-    except LookupError:  # 下载一次
-        nltk.download("punkt")
-        try:
-            nltk.data.find("tokenizers/punkt_tab")
-        except LookupError:
-            nltk.download("punkt_tab")
     from nltk.tokenize import sent_tokenize
 
-    # 调用 sent_tokenize 将文本分句；对每个句子做 strip() 去两端空白，并过滤空串。
+    # Only check/download models once (module-level flag)
+    if not getattr(sentences_nltk, "_initialized", False):
+        try:
+            nltk.data.find("tokenizers/punkt")
+        except LookupError:
+            nltk.download("punkt")
+            try:
+                nltk.data.find("tokenizers/punkt_tab")
+            except LookupError:
+                nltk.download("punkt_tab")
+        sentences_nltk._initialized = True
+
+    # Call sent_tokenize, strip whitespace per sentence, filter empty strings.
     return [s.strip() for s in sent_tokenize(text) if s.strip()]
 
 

@@ -182,9 +182,13 @@ async def start_workers(queue: TaskQueue, settings: Optional[ServiceSettings] = 
                 task_type = metadata.get("task_type", "check")
 
                 if task_type == "benchmark":
-                    final_state = process_benchmark_task(task, metadata)
+                    final_state = await asyncio.get_event_loop().run_in_executor(
+                        None, process_benchmark_task, task, metadata
+                    )
                 else:
-                    final_state = process_check_task(task, metadata, pipeline)
+                    final_state = await asyncio.get_event_loop().run_in_executor(
+                        None, process_check_task, task, metadata, pipeline
+                    )
 
                 callback_url = final_state.metadata.get("callback_url") if final_state.metadata else None
                 if callback_url:

@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import functools
+import logging
 from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+logger = logging.getLogger(__name__)
+
+_ENV_FILE = Path(".env")
+
 
 class ServiceSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="COPYLESS_", env_file=Path(".env"), extra="allow")
+    model_config = SettingsConfigDict(env_prefix="COPYLESS_", env_file=_ENV_FILE, extra="allow")
 
     # Qdrant connection
     qdrant_url: str = "http://localhost:6333"
@@ -59,4 +64,6 @@ class ServiceSettings(BaseSettings):
 
 @functools.lru_cache(maxsize=1)
 def get_settings() -> ServiceSettings:
+    if not _ENV_FILE.exists():
+        logger.info("No .env file found at %s, using defaults and environment variables", _ENV_FILE)
     return ServiceSettings()
